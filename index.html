@@ -1,98 +1,166 @@
 <!DOCTYPE html>
 <html style="background-color: #ebebeb;">
 
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  </head>
-  <script type="text/javascript" src="./webPushSdk.min.1.0.0.js"></script>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+</head>
+<script type="text/javascript" src="./webPushSdk.produce.min.2.1.6.js"></script>
 
-  <body>
-    <h1 id="MTpush">MTpush-P example.</h1>
-    <h5 id="rid">RegistrationID:</h5>
-    <h5 id="per">浏览器通知权限：</h5>
-    <button onclick="onEvent()">设置事件监听</button><br />
-    <button onclick="init()">初始化</button><br />
-    <button onclick="getRegistrationID()">获取 RegistrationID</button><br />
-    <button onclick="stopPush()">停止推送</button><br />
-    <button onclick="getPushAuthority()">检查推送服务状态</button><br />
-    <button onclick="getWebPermission()">浏览器通知权限</button><br />
-    <div>tips:sw.min.1.0.0.js (版本号根据实际情况修改) 请放在网站根目录，因为服务sw.xx.js文件只能接管目录之下的页面</div>
-    <input id="userInput" type="text" placeholder="请输入tagalias 对像" style="width:100%">
-    <div>示例：{"tags":["test1","test2"],"alias":"swefgwwefwfwfwf"}</div>
-    <button onclick="setTagsAlias()">设置tag 或alias</button><br />
+<body>
+  <h1 id="MTpush">Webpush-SDK.</h1>
+  <h5 id="rid">RegistrationID:</h5>
+  <h5 id="Notistats">推送服务状态:</h5>
+  <h5 id="per">浏览器通知权限：</h5>
+  <h5 id="ps">注：先初始化SDK，再设置事件监听，这样才会收到后台推送的消息</h5>
 
-  </body>
-  <script>
-    // 请在初始化前注册事件监听
-    function onEvent () {
-      // 极光通道断开连接时的回调
-      MTpushInterface.mtPush.onDisconnect(function () {
-        console.log("onDisconnect");
-      });
-      //得到推送消息(web推送，浏览器厂商通道)
-      MTpushInterface.onMsgReceive((msgData) => {
-        //msgData数据结构{data:{xxx},type:0} type:0是极光通道，1是系统通道
-        console.log("得到推送消息:", msgData);
-      });
+  <input type="text" value="" id="user" size="35" maxlength="200" placeholder="输入用户名 & 点击初始化" />
+  <button onclick="init()">初始化</button><br /><br />
+  <button onclick="getRegistrationID()">获取 RegistrationID</button><br /><br />
+  <button onclick="getPushAuthority()">检查推送服务状态</button><br /><br />
+  <button onclick="getWebPermission()">浏览器通知权限</button><br /><br />
+  <button onclick="stopPush()">停止推送</button><br /><br />
+  <button onclick="clearData()">清理数据</button><br /><br />
+  <button id="applyNoti">申请通知栏权限</button><br /><br />
+  <h5 id="msgData">通知内容：</h5>
+  <div>tips:收不到信息，检查如下地方：1、通知栏权限是否打开（点击浏览器左上角的锁）<br>2、浏览器的应用通知权限没有打开，例如：mac -> 通用设置 -> 通知 -> 浏览器 <br>
+    3、走浏览器厂商可能会导致接收不到，切换一下下发策略。</div>
+</body>
+<script>
+  //移动端查看日志
+  var p = navigator.platform;
+  var systerm = { win: p.indexOf('Win') === 0, mac: p.indexOf('Mac') === 0 }
+  if (!(systerm.win || systerm.mac)) {
+    let dom = document.createElement('script')
+    dom.src = 'https://unpkg.com/vconsole@latest/dist/vconsole.min.js';
+    dom.onload = function () {
+      new window.VConsole();
     }
-    //  推送初始化 
-    MTpushInterface.init(
-      {
-        dataCenter: '', //数据中心名称，如果不存在就用内置的默认数据中心
-        report_url: "xxx/v3/report", //统计上报地址 必填
-        appkey: "39e134a9588a74496085960f",
-        user_str: "adminDemo",
-        fail (data) {
-          console.log("在线推送创建失败", data);
-        },
-        success (data) {
-          console.log("在线推送创建成功", data);
-        },
-        webPushcallback (cod, tip) {
-          console.log("用户得到的状态码及提示", code, tip);
-        },
-        baseUrl: 'https://ashy-ground-012541310.4.azurestaticapps.net', //服务器域名如果不存在则用打包时注入的地址
-        //swUrl?: string; //默认 "/sw" + sdkEnv.prefix 
-        canGetInfo (d) {
-          //此时可以得到RegId 也可以在d里面取到所有的数据
-          console.log("得到RegId", MTpushInterface.getRegistrationID(), d);
-          // MTpushInterface.setTagsAlias({ tags: ["test1", "test2"], alias: "swefgwwefwfwfwf" });
-        },
-        custom: (res) => {
-          //当使用自定义提示配置时，需调用res来请求并配置权限
-          document.getElementById("xx")?.addEventListener("click", res);
-        },
+    document.head.appendChild(dom)
+  }
+
+
+  window.onload = function () {
+    //init();
+
+  }
+  // 请在初始化后注册事件监听
+  var msgcontent = "通知内容：<br/>"
+  function onEvent() {
+    // 极光通道断开连接时的回调
+    MTpushInterface.mtPush.onDisconnect(function () {
+      console.log("onDisconnect");
+    });
+    //得到推送消息(web推送，浏览器厂商通道)
+    MTpushInterface.onMsgReceive((msgData) => {
+      //msgData数据结构{data:{xxx},type:0} type:0是极光通道，1是系统通道
+      console.log("得到推送消息:", msgData);
+      msgcontent = msgcontent + JSON.stringify(msgData) + "<br/>";
+      document.getElementById("msgData").innerHTML = msgcontent;
+      if (msgData["type"] == 1) {
+        if (msgData["data"]["data"]["ntf_or_msg"] != 1) {
+          MTpushInterface.customClickReport(msgData["data"]["tag"], "W3Push");
+        }
       }
-    );
-
-    function getRegistrationID () {
-      var rid = MTpushInterface.getRegistrationID();
-      document.getElementById("rid").innerHTML = "RegistrationID:" + rid;
-    };
-
-    function stopPush () {
-      window.MTpushInterface.mtPush.stopPush();
-      getRegistrationID();
-    };
-    function getWebPermission () {
-      let per = MTpushInterface.getWebPermission();
-      document.getElementById("per").innerHTML = "浏览器通知权限：" + per;
-    }
-    function getPushAuthority () {
-      console.log("检查推送服务状态", MTpushInterface.getPushAuthority());
-    }
-    function setTagAlias () {
-      let option = document.getElementById('userInput');
-      try {
-        MTpushInterface.setTagsAlias(JSON.parse(option.value))
-      } catch (error) {
-        console.log(error)
-        alert('请输入合法json字串',)
+      if (msgData["type"] == 0) {
+        if (msgData["data"]["messages"][0]["ntf_or_msg"] != 1) {
+          MTpushInterface.customClickReport(msgData["data"]["messages"][0]["msg_id"]);
+        }
       }
-    }
+    });
+  };
+  //  推送初始化
+  function init() {
+    var user_str_v = "admin";
+    user_str_v = document.getElementById("user").value;
+    console.log("user_str is ", user_str_v);
+    MTpushInterface.init({
+      // 测试只需要修改以下两个参数                              
+      appkey: '39e134a9588a74496085960f',//appkey信息 测试用         
+      user_str: user_str_v,//用户标识 测试用
+      is_temporary: "n",
 
-  </script>
+      fail(err) {
+        console.log("在线推送创建失败", err);
+      },
+      success(data) {
+        onEvent();
+        console.log("在线推送创建成功", data);
+      },
+      webPushcallback(code, tip) {
+        console.log("用户得到的状态码及提示", code, tip);
+      },
+      swUrl: 'sw.produce.min.2.1.6.js', //默认 "/sw_xs.min." + sdkEnv.version + ".js"
+      canGetInfo(data) {
+        //此时可以得到通知的一些配置数据，在此回调函数之后可以得到RegId
+        console.log(data); //相关配置信息
+        var rid = MTpushInterface.getRegistrationID();
+        console.log("得到RegId", rid);
+        document.getElementById("rid").innerHTML = "RegistrationID:" + rid;
+      },
+      custom: (res) => {
+        //当使用自定义提示配置时，需手动调用fuc()来请求通知权限。只能通过custom得到请求通知权限函数。
+        //fuc() 调用时会请求通知权限
+        document.getElementById("applyNoti")?.addEventListener("click", res);
+        console.log("申请通知权限：" + res);
+      },
+    });
+  };
+
+
+  //获取rid
+  function getRegistrationID() {
+    var rid = MTpushInterface.getRegistrationID();
+    document.getElementById("rid").innerHTML = "RegistrationID:" + rid;
+  };
+
+  //获取浏览器通知权限
+  function getWebPermission() {
+    let per = MTpushInterface.getWebPermission();
+    document.getElementById("per").innerHTML = "浏览器通知权限：" + per;
+  };
+
+  //停止服务
+  function stopPush() {
+    window.MTpushInterface.mtPush.stopPush();
+    getRegistrationID();
+  };
+
+  //检查推送服务状态
+  function getPushAuthority() {
+    var stats = MTpushInterface.getPushAuthority();
+    console.log("检查推送服务状态", MTpushInterface.getPushAuthority());
+    document.getElementById("Notistats").innerHTML = "推送服务状态:" + JSON.stringify(stats);
+  };
+
+  //设置tags
+  function setTagsAlias() {
+    var tags_v = document.getElementById("tags_i").value.split(",");
+    console.log("tags is ", tags_v);
+    var alias_v = document.getElementById("alias_i").value
+    console.log("alias is ", alias_v);
+
+    MTpushInterface.setTagsAlias({ tags: tags_v, alias: alias_v });
+  };
+
+  //取消订阅登陆
+  function unSubscribe() {
+    MTpushInterface.unSubscribe();
+    console.log("取消订阅 ");
+    document.getElementById("Notistats").innerHTML = "推送服务状态:" + "已取消订阅！";
+  };
+
+  //清理控件展示数据
+  function clearData() {
+    console.log("清理控件展示的数据");
+    document.getElementById("rid").innerHTML = "RegistrationID:";
+    document.getElementById("per").innerHTML = "浏览器通知权限：";
+    document.getElementById("Notistats").innerHTML = "推送服务状态:";
+    document.getElementById("msgData").innerHTML = "通知内容：";
+    msgcontent = "通知内容：<br/>";
+  };
+
+</script>
 
 </html>
